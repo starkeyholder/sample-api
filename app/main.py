@@ -5,7 +5,7 @@ Mimics RAD team's FastAPI patterns (similar to VizioGram API)
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, UTC ## added UTC for fixing timestamp error
 import uuid
 
 app = FastAPI(title="User Management API", version="1.0.0")
@@ -25,6 +25,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, min_length=1, max_length=100)
 
 
+
 class User(BaseModel):
     id: str
     username: str
@@ -38,7 +39,7 @@ class User(BaseModel):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now(UTC).isoformat()}
 
 
 @app.post("/users", response_model=User, status_code=status.HTTP_201_CREATED)
@@ -58,7 +59,7 @@ async def create_user(user_data: UserCreate):
             )
 
     user_id = str(uuid.uuid4())
-    now = datetime.utcnow()
+    now = datetime.now(UTC) # updated
 
     user = {
         "id": user_id,
@@ -77,7 +78,8 @@ async def create_user(user_data: UserCreate):
 @app.get("/users", response_model=List[User])
 async def list_users(active_only: bool = True):
     """List all users, optionally filter by active status"""
-    if not active_only:
+    # if not active_only:
+    if active_only:
         return [user for user in users_db.values() if user["is_active"]]
     return list(users_db.values())
 
@@ -119,7 +121,7 @@ async def update_user(user_id: str, user_data: UserUpdate):
     if user_data.full_name is not None:
         user["full_name"] = user_data.full_name
 
-    user["updated_at"] = datetime.utcnow()
+    user["updated_at"] = datetime.now(UTC) # updated
     users_db[user_id] = user
 
     return user
@@ -135,7 +137,7 @@ async def delete_user(user_id: str):
         )
 
     users_db[user_id]["is_active"] = False
-    users_db[user_id]["updated_at"] = datetime.utcnow()
+    users_db[user_id]["updated_at"] = datetime.now(UTC)
 
 
 @app.delete("/users/{user_id}/permanent", status_code=status.HTTP_204_NO_CONTENT)
